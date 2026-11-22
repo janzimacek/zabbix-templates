@@ -1,0 +1,387 @@
+zabbix_export:
+  version: '8.0'
+  template_groups:
+  - uuid: ab24cf0abd874f6380ff6761d9748289
+    name: Templates/Storage
+  templates:
+  - uuid: d18caa39ce234b9e8ad52d2dd3b915eb
+    template: Synology NAS by SNMP - Core
+    name: Synology NAS by SNMP - Core
+    description: Universal Synology NAS Core for Zabbix 8.0. Dashboard-free monitoring layer with SNMP and physical-disk LLD. Link one optional 2/4/8-disk dashboard template to hosts.
+    groups:
+    - name: Templates/Storage
+    items:
+    - uuid: 7552bce61dd04a828135318d7b29639f
+      name: ICMP availability
+      type: SIMPLE
+      key: icmpping
+      delay: 30s
+      history: 90d
+      valuemap:
+        name: ICMP availability
+    - uuid: b1a25dbde1ee490c89fa17dbc1c39fb6
+      name: Model
+      type: SNMP_AGENT
+      key: synology.model
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.5.1.0
+      value_type: CHAR
+    - uuid: d61d08acddcd4f4e8a547c62f7d15b59
+      name: DSM version
+      type: SNMP_AGENT
+      key: synology.dsm.version
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.5.3.0
+      value_type: CHAR
+    - uuid: 12b559583e6648e98f254502dde5125f
+      name: System status
+      type: SNMP_AGENT
+      key: synology.system.status
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.1.0
+      valuemap:
+        name: Synology binary status
+    - uuid: 07cd4f0087f446438e1585e0542a3087
+      name: Power status
+      type: SNMP_AGENT
+      key: synology.power.status
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.3.0
+      valuemap:
+        name: Synology binary status
+    - uuid: 176089513da045a2850514f8a5d1a5f3
+      name: Fan 1 status
+      type: SNMP_AGENT
+      key: synology.fan1.status
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.4.1.0
+      valuemap:
+        name: Synology binary status
+    - uuid: b2c542872e0d42038062760fa0ec4ea8
+      name: Fan 2 status
+      type: SNMP_AGENT
+      key: synology.fan2.status
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.4.2.0
+      valuemap:
+        name: Synology binary status
+    - uuid: d61fbb51ec35477e82b4d01875df1e58
+      name: System temperature
+      type: SNMP_AGENT
+      key: synology.system.temperature
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.1.2.0
+      units: °C
+    - uuid: 7c9387a690d647de8e42f1340c061174
+      name: Hardware uptime
+      type: SNMP_AGENT
+      key: synology.hw.uptime
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.25.1.1.0
+      units: uptime
+      preprocessing:
+      - type: MULTIPLIER
+        parameters:
+        - '0.01'
+    - uuid: 86b5c7399144462883e55387860f2f0e
+      name: Volume 1 name
+      type: SNMP_AGENT
+      key: synology.volume.name[0]
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.3.1.1.2.0
+      value_type: CHAR
+    - uuid: 5b3ca22efea845588fc84ff37555965e
+      name: Volume 1 status
+      type: SNMP_AGENT
+      key: synology.volume.status[0]
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.3.1.1.3.0
+      valuemap:
+        name: Synology RAID status
+    - uuid: c3f85421b65d436282175dc04564b727
+      name: Volume 1 free space
+      type: SNMP_AGENT
+      key: synology.volume.free[0]
+      delay: 15m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.3.1.1.4.0
+      units: B
+    - uuid: 2deb552c7e1f4214819cb6d1fd01a190
+      name: Volume 1 total space
+      type: SNMP_AGENT
+      key: synology.volume.total[0]
+      delay: 15m
+      history: 90d
+      snmp_oid: 1.3.6.1.4.1.6574.3.1.1.5.0
+      units: B
+    - uuid: 3c0559461b974b0587edb751210f91ee
+      name: Volume 1 used space
+      type: CALCULATED
+      key: synology.volume.used[0]
+      delay: 15m
+      history: 90d
+      units: B
+      params: last(//synology.volume.total[0])-last(//synology.volume.free[0])
+    - uuid: e9b13d7de18c47c5802bbfe2d4afc766
+      name: Volume 1 utilization
+      type: CALCULATED
+      key: synology.volume.utilization[0]
+      delay: 15m
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: 100*(last(//synology.volume.total[0])-last(//synology.volume.free[0]))/last(//synology.volume.total[0])
+    macros:
+    - macro: '{$SYNOLOGY.DISK.MODEL.MATCHES}'
+      value: .+
+    - macro: '{$SYNOLOGY.DISK.TEMP.WARN}'
+      value: '50'
+    - macro: '{$SYNOLOGY.SYSTEM.TEMP.WARN}'
+      value: '60'
+    - macro: '{$SYNOLOGY.SYSTEM.TEMP.CRIT}'
+      value: '70'
+    - macro: '{$SYNOLOGY.VOLUME.USED.WARN}'
+      value: '80'
+    - macro: '{$SYNOLOGY.VOLUME.USED.CRIT}'
+      value: '90'
+    tags:
+    - tag: class
+      value: storage
+    - tag: role
+      value: nas
+    - tag: vendor
+      value: synology
+    discovery_rules:
+    - uuid: 098de097e5b541b489aae27f3fd5b0f9
+      name: Synology disk discovery
+      type: SNMP_AGENT
+      snmp_oid: discovery[{#DISKID},1.3.6.1.4.1.6574.2.1.1.2,{#DISKMODEL},1.3.6.1.4.1.6574.2.1.1.3]
+      key: synology.disk.discovery
+      delay: 1h
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#DISKMODEL}'
+          value: '{$SYNOLOGY.DISK.MODEL.MATCHES}'
+          formulaid: A
+      item_prototypes:
+      - uuid: 2f0d8c00673d40e881ef3c742192fc68
+        name: 'Synology: Drive {#DISKID} model'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.3.{#SNMPINDEX}
+        key: synology.disk.model[{#SNMPINDEX}]
+        delay: 1h
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+        value_type: CHAR
+      - uuid: 207f95d7b22642138c7f06be63617e9d
+        name: 'Synology: Drive {#DISKID} status'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.5.{#SNMPINDEX}
+        key: synology.disk.status[{#SNMPINDEX}]
+        delay: 5m
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+        valuemap:
+          name: Synology disk status
+      - uuid: 11ec18f2a0de415c8538a7c052f1c3e7
+        name: 'Synology: Drive {#DISKID} temperature'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.6.{#SNMPINDEX}
+        key: synology.disk.temperature[{#SNMPINDEX}]
+        delay: 5m
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+        units: °C
+      - uuid: 0e32a90040e446ca81838c9970d95de8
+        name: 'Synology: Drive {#DISKID} bad sectors'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.9.{#SNMPINDEX}
+        key: synology.disk.badsectors[{#SNMPINDEX}]
+        delay: 15m
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+      - uuid: 24fdb2699ce54abb80fcf9f3af4d8269
+        name: 'Synology: Drive {#DISKID} identify failures'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.10.{#SNMPINDEX}
+        key: synology.disk.identifyfail[{#SNMPINDEX}]
+        delay: 15m
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+      - uuid: b2b701596beb4df78f660eda54c059ab
+        name: 'Synology: Drive {#DISKID} health'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.4.1.6574.2.1.1.13.{#SNMPINDEX}
+        key: synology.disk.health[{#SNMPINDEX}]
+        delay: 5m
+        history: 90d
+        tags:
+        - tag: component
+          value: disk
+        valuemap:
+          name: Synology disk health
+      trigger_prototypes:
+      - uuid: a965313aaa0140448846b49c2a8cc187
+        expression: last(/Synology NAS by SNMP - Core/synology.disk.status[{#SNMPINDEX}])<>1
+        name: 'Synology NAS: Drive {#DISKID} ({#DISKMODEL}) status is not normal'
+        priority: HIGH
+      - uuid: f6d504cccdc549bf85b0b66e3f6c901e
+        expression: last(/Synology NAS by SNMP - Core/synology.disk.health[{#SNMPINDEX}])<>1
+        name: 'Synology NAS: Drive {#DISKID} ({#DISKMODEL}) health warning'
+        priority: HIGH
+      - uuid: 1b0d64f75eb6417884748f577541587b
+        expression: last(/Synology NAS by SNMP - Core/synology.disk.badsectors[{#SNMPINDEX}])>0
+        name: 'Synology NAS: Drive {#DISKID} ({#DISKMODEL}) has bad sectors'
+        priority: WARNING
+      - uuid: b4fbadccb89e48bd8420a8f7453769f2
+        expression: last(/Synology NAS by SNMP - Core/synology.disk.identifyfail[{#SNMPINDEX}])>0
+        name: 'Synology NAS: Drive {#DISKID} ({#DISKMODEL}) identify failures detected'
+        priority: WARNING
+      - uuid: 8464d3617d9149d4858302cd9254db83
+        expression: avg(/Synology NAS by SNMP - Core/synology.disk.temperature[{#SNMPINDEX}],10m)>{$SYNOLOGY.DISK.TEMP.WARN}
+        name: 'Synology NAS: Drive {#DISKID} ({#DISKMODEL}) temperature is high'
+        priority: WARNING
+      graph_prototypes:
+      - uuid: 77beb965a631448485f20086300d53f2
+        name: 'Synology: Drive {#DISKID} ({#DISKMODEL}) temperature'
+        show_work_period: 'NO'
+        ymin_type_1: FIXED
+        graph_items:
+        - color: 1E88E5
+          item:
+            host: Synology NAS by SNMP - Core
+            key: synology.disk.temperature[{#SNMPINDEX}]
+    valuemaps:
+    - uuid: 95dada7795934f958c0c751d906a8897
+      name: ICMP availability
+      mappings:
+      - value: '0'
+        newvalue: Down
+      - value: '1'
+        newvalue: Up
+    - uuid: 7dda28b290804c4d853c8d02cdfacfc8
+      name: Synology binary status
+      mappings:
+      - value: '1'
+        newvalue: Normal
+      - value: '2'
+        newvalue: Failed
+    - uuid: 75339608e88e42e58794c271de25cfc4
+      name: Synology disk health
+      mappings:
+      - value: '1'
+        newvalue: Normal
+      - value: '2'
+        newvalue: Warning
+      - value: '3'
+        newvalue: Critical
+      - value: '4'
+        newvalue: Failing
+    - uuid: 79ac265ff7a741d189a302a06818787e
+      name: Synology disk status
+      mappings:
+      - value: '1'
+        newvalue: Normal
+      - value: '2'
+        newvalue: Initialized
+      - value: '3'
+        newvalue: Not initialized
+      - value: '4'
+        newvalue: System partition failed
+      - value: '5'
+        newvalue: Crashed
+    - uuid: fe4f54a116694e638afad1cdfe3fe56d
+      name: Synology RAID status
+      mappings:
+      - value: '1'
+        newvalue: Normal
+      - value: '2'
+        newvalue: Repairing
+      - value: '3'
+        newvalue: Migrating
+      - value: '4'
+        newvalue: Expanding
+      - value: '11'
+        newvalue: Degraded
+      - value: '12'
+        newvalue: Crashed
+    triggers:
+    - uuid: 787598bb4fd447918956d97b273c8c39
+      expression: last(/Synology NAS by SNMP - Core/synology.system.status)<>1
+      name: 'Synology NAS: System status is not normal'
+      priority: HIGH
+    - uuid: 221c78c644b849f587e820339d0793c3
+      expression: last(/Synology NAS by SNMP - Core/synology.power.status)<>1
+      name: 'Synology NAS: Power status failed'
+      priority: HIGH
+    - uuid: b66ca5e924cf446f8c2c04e7f5c7708a
+      expression: last(/Synology NAS by SNMP - Core/synology.volume.status[0])>=11
+      name: 'Synology NAS: Volume 1 is degraded or crashed'
+      priority: DISASTER
+    - uuid: 41d5c3c6b7fa42a286db26e5c3aeaf47
+      expression: avg(/Synology NAS by SNMP - Core/synology.system.temperature,10m)>{$SYNOLOGY.SYSTEM.TEMP.WARN}
+      name: 'Synology NAS: System temperature is high'
+      priority: WARNING
+    - uuid: 5bb042fa7bf746688b93c6dbdab26a56
+      expression: avg(/Synology NAS by SNMP - Core/synology.system.temperature,10m)>{$SYNOLOGY.SYSTEM.TEMP.CRIT}
+      name: 'Synology NAS: System temperature is critical'
+      priority: HIGH
+    - uuid: efd1c2e1de1c43a78f5964bc1329b839
+      expression: avg(/Synology NAS by SNMP - Core/synology.volume.utilization[0],30m)>{$SYNOLOGY.VOLUME.USED.WARN}
+      name: 'Synology NAS: Volume 1 utilization is high'
+      priority: WARNING
+    - uuid: 4be70b5b8f0c490e839f93ca982cd987
+      expression: avg(/Synology NAS by SNMP - Core/synology.volume.utilization[0],30m)>{$SYNOLOGY.VOLUME.USED.CRIT}
+      name: 'Synology NAS: Volume 1 utilization is critical'
+      priority: HIGH
+    - uuid: 3cbc70783a8a4c19849af3fb7d56051d
+      expression: max(/Synology NAS by SNMP - Core/icmpping,3m)=0
+      name: 'Synology NAS: Unreachable by ICMP'
+      priority: HIGH
+  graphs:
+  - uuid: 009784db27ec4a6b8a6fb869e3ee4407
+    name: 'Synology: Volume 1 capacity'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: E53935
+      item:
+        host: Synology NAS by SNMP - Core
+        key: synology.volume.used[0]
+    - color: 43A047
+      item:
+        host: Synology NAS by SNMP - Core
+        key: synology.volume.free[0]
+  - uuid: 344bb2fe519343a88d67b3c15dcb2fed
+    name: 'Synology: Volume 1 utilization'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: 1E88E5
+      item:
+        host: Synology NAS by SNMP - Core
+        key: synology.volume.utilization[0]
