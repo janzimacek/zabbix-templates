@@ -1,0 +1,451 @@
+zabbix_export:
+  version: '8.0'
+  template_groups:
+  - uuid: ec702ab11ba34ceb8eab0bcb3a2215b0
+    name: Templates/Network devices
+  templates:
+  - uuid: e991152319ad4f87882f32d99c18f480
+    template: HP Monochrome Laser Printer by SNMP
+    name: HP Monochrome Laser Printer by SNMP
+    description: Universal Zabbix 8.0 SNMP template for HP monochrome laser printers. Uses standard SNMP system OIDs and Printer-MIB supplies discovery, so non-existent toner colors/drums are not created unless the printer exposes them.
+    groups:
+    - name: Templates/Network devices
+    items:
+    - uuid: 7a329033526b468d843a9f6273dc0957
+      name: ICMP availability
+      type: SIMPLE
+      key: icmpping
+      delay: 30s
+      history: 90d
+      valuemap:
+        name: ICMP availability
+      triggers:
+      - uuid: e42dd171efc64f528237b9d0da37a2e8
+        expression: max(/HP Monochrome Laser Printer by SNMP/icmpping,3m)=0
+        name: Printer is unreachable by ICMP
+        priority: HIGH
+        tags:
+        - tag: component
+          value: availability
+    - uuid: 7ca5fb7b9d3644598c391bd713af8690
+      name: Ping response time
+      type: SIMPLE
+      key: icmppingsec[,3]
+      delay: 30s
+      history: 90d
+      value_type: FLOAT
+      units: s
+    - uuid: 01d31af357684315850d0403cf0ebcf4
+      name: System name
+      type: SNMP_AGENT
+      key: printer.system.name
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.5.0
+      value_type: CHAR
+    - uuid: 0e2d525bbd1c48118fae729e7797e640
+      name: System description
+      type: SNMP_AGENT
+      key: printer.system.description
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.1.0
+      value_type: TEXT
+    - uuid: b6c86ebf0f854e388f4c836a97535ea7
+      name: SNMP uptime
+      type: SNMP_AGENT
+      key: printer.system.uptime
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.3.0
+      units: uptime
+      preprocessing:
+      - type: MULTIPLIER
+        parameters:
+        - '0.01'
+    - uuid: ae297459ba11486681d6e2505d91bfa0
+      name: Printed pages total
+      type: SNMP_AGENT
+      key: printer.pages.total
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.43.10.2.1.4.1.1
+      units: pages
+    - uuid: e647680f5852456c8a6d07d1a635b4a7
+      name: Printed pages formatted
+      type: DEPENDENT
+      key: printer.pages.total.formatted
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      master_item:
+        key: printer.pages.total
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      description: Dashboard display value with a space as the thousands separator. The numeric printer.pages.total item remains authoritative for graphs and calculations.
+    discovery_rules:
+    - uuid: e5be41343f544b9383223dc1e268c968
+      name: Printer supplies discovery
+      type: SNMP_AGENT
+      snmp_oid: discovery[{#SUPPLY.NAME},1.3.6.1.2.1.43.11.1.1.6]
+      key: printer.supplies.discovery
+      delay: 1h
+      filter:
+        evaltype: AND
+        conditions:
+        - macro: '{#SUPPLY.NAME}'
+          value: '{$PRINTER.SUPPLY.NAME.MATCHES}'
+          formulaid: A
+      item_prototypes:
+      - uuid: 9ddfe4a171504fe6882a5449727f046b
+        name: 'Supply {#SUPPLY.NAME}: Maximum capacity'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.2.1.43.11.1.1.8.{#SNMPINDEX}
+        key: printer.supply.max[{#SNMPINDEX}]
+        delay: 1h
+        history: 90d
+      - uuid: 87e922cbb107412f83127378d55aa1fe
+        name: 'Supply {#SUPPLY.NAME}: Current level'
+        type: SNMP_AGENT
+        snmp_oid: 1.3.6.1.2.1.43.11.1.1.9.{#SNMPINDEX}
+        key: printer.supply.level[{#SNMPINDEX}]
+        delay: 5m
+        history: 90d
+      - uuid: de11433e196e47f688500d5e3a32a269
+        name: 'Supply {#SUPPLY.NAME}: Remaining'
+        type: CALCULATED
+        key: printer.supply.percent[{#SNMPINDEX}]
+        delay: 5m
+        history: 90d
+        value_type: FLOAT
+        units: '%'
+        params: 100 * last(//printer.supply.level[{#SNMPINDEX}]) / last(//printer.supply.max[{#SNMPINDEX}])
+        description: Remaining percentage calculated from Printer-MIB current level and maximum capacity.
+      trigger_prototypes:
+      - uuid: 0dc0d7a66efc49a688608ff19cec918c
+        expression: last(/HP Monochrome Laser Printer by SNMP/printer.supply.percent[{#SNMPINDEX}])<{$PRINTER.SUPPLY.WARN} and last(/HP Monochrome Laser Printer by SNMP/printer.supply.percent[{#SNMPINDEX}])>=0
+        name: 'Printer: {#SUPPLY.NAME} is low (<{$PRINTER.SUPPLY.WARN}%)'
+        priority: WARNING
+        tags:
+        - tag: component
+          value: toner
+      - uuid: 0fd1a57cf6514f008c2b90ca3d9a79dc
+        expression: last(/HP Monochrome Laser Printer by SNMP/printer.supply.percent[{#SNMPINDEX}])<{$PRINTER.SUPPLY.CRIT} and last(/HP Monochrome Laser Printer by SNMP/printer.supply.percent[{#SNMPINDEX}])>=0
+        name: 'Printer: {#SUPPLY.NAME} is critically low (<{$PRINTER.SUPPLY.CRIT}%)'
+        priority: HIGH
+        tags:
+        - tag: component
+          value: toner
+      graph_prototypes:
+      - uuid: 83582ad9910d401d8199f9b8f671555a
+        name: 'Supply {#SUPPLY.NAME}: Remaining %'
+        show_work_period: 'NO'
+        show_triggers: 'NO'
+        ymin_type_1: FIXED
+        ymax_type_1: FIXED
+        graph_items:
+        - color: 1A7C11
+          item:
+            host: HP Monochrome Laser Printer by SNMP
+            key: printer.supply.percent[{#SNMPINDEX}]
+    macros:
+    - macro: '{$PRINTER.SUPPLY.NAME.MATCHES}'
+      value: .+
+      description: Discover all non-empty Printer-MIB supply descriptions.
+    - macro: '{$PRINTER.SUPPLY.WARN}'
+      value: '20'
+      description: Consumable warning threshold in percent.
+    - macro: '{$PRINTER.SUPPLY.CRIT}'
+      value: '10'
+      description: Consumable high-severity threshold in percent.
+    tags:
+    - tag: class
+      value: printer
+    - tag: technology
+      value: laser
+    - tag: vendor
+      value: HP
+    valuemaps:
+    - uuid: 6eec74c82dbd44eb81ef174cb2893bc2
+      name: ICMP availability
+      mappings:
+      - value: '0'
+        newvalue: Down
+      - value: '1'
+        newvalue: Up
+    dashboards:
+    - uuid: 2646a5e10923492d873f6a3eea2f0e35
+      name: HP Monochrome Laser Printer overview
+      pages:
+      - name: Overview
+        widgets:
+        - type: item
+          name: ICMP availability
+          width: '12'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              key: icmpping
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: R231B
+          - type: STRING
+            name: thresholds.0.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '1'
+        - type: item
+          name: Ping response time
+          width: '12'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '3'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              key: icmppingsec[,3]
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RAC90
+          - type: STRING
+            name: thresholds.0.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: FFBF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '0.05'
+          - type: STRING
+            name: thresholds.2.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.2.threshold
+            value: '0.2'
+          x: '12'
+        - type: item
+          name: System name
+          width: '18'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              key: printer.system.name
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RFF2D
+          x: '24'
+        - type: item
+          name: Uptime
+          width: '14'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '14'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              key: printer.system.uptime
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '14'
+          - type: INTEGER
+            name: value_size
+            value: '14'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RED60
+          x: '42'
+        - type: item
+          name: Printed pages
+          width: '16'
+          height: '4'
+          fields:
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              key: printer.pages.total.formatted
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: value_size
+            value: '18'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RD3EF
+          x: '56'
+        - type: graph
+          name: Ping response time
+          y: '10'
+          width: '36'
+          height: '6'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              name: 'Printer: Ping response time'
+          - type: STRING
+            name: reference
+            value: PINGG
+        - type: graph
+          name: Printed pages total
+          x: '36'
+          y: '10'
+          width: '36'
+          height: '6'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              name: 'Printer: Printed pages total'
+          - type: STRING
+            name: reference
+            value: PAGEG
+        - type: problems
+          name: Printer problems
+          y: '16'
+          width: '72'
+          height: '6'
+          fields:
+          - type: INTEGER
+            name: show
+            value: '3'
+          - type: INTEGER
+            name: show_tags
+            value: '2'
+        - type: graphprototype
+          name: Toner / consumable remaining
+          y: '4'
+          width: '72'
+          height: '6'
+          fields:
+          - type: INTEGER
+            name: source_type
+            value: '2'
+          - type: GRAPH_PROTOTYPE
+            name: graphid.0
+            value:
+              host: HP Monochrome Laser Printer by SNMP
+              name: 'Supply {#SUPPLY.NAME}: Remaining %'
+          - type: INTEGER
+            name: columns
+            value: '1'
+          - type: INTEGER
+            name: rows
+            value: '1'
+          - type: INTEGER
+            name: show_legend
+            value: '1'
+          - type: STRING
+            name: reference
+            value: TONER
+  graphs:
+  - uuid: 8a496d0840fe476586ef7d9458463883
+    name: 'Printer: Printed pages total'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 0040FF
+      item:
+        host: HP Monochrome Laser Printer by SNMP
+        key: printer.pages.total
+  - uuid: 9e6dc2de6f9f438c81ffd49ce9db54c5
+    name: 'Printer: Ping response time'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 1E88E5
+      item:
+        host: HP Monochrome Laser Printer by SNMP
+        key: icmppingsec[,3]

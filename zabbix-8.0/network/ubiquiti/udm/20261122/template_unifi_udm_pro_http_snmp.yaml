@@ -1,0 +1,1083 @@
+zabbix_export:
+  version: '8.0'
+  template_groups:
+  - uuid: e0f3b150dc154388acc2513f605a178d
+    name: Templates/Network devices
+  templates:
+  - uuid: 0efb2447e34245b2a39e9f475b8082b0
+    template: UniFi UDM Pro by HTTP and SNMP
+    name: UniFi UDM Pro by HTTP and SNMP
+    groups:
+    - name: Templates/Network devices
+    items:
+    - uuid: 8f133f99ea7b49878a680082031b3a1c
+      name: 'UDM Pro: ICMP availability'
+      type: SIMPLE
+      key: icmpping[{$UNIFI.HOST}]
+      delay: 30s
+      valuemap:
+        name: ICMP availability
+      triggers:
+      - uuid: 9eb085b2ba1a4d23985f43f495d8ae47
+        expression: max(/UniFi UDM Pro by HTTP and SNMP/icmpping[{$UNIFI.HOST}],2m)=0
+        name: 'UDM Pro: Device is unreachable by ICMP'
+        priority: DISASTER
+        tags:
+        - tag: component
+          value: system
+        - tag: scope
+          value: availability
+    - uuid: 005c3a3cf04747088401b6b7ba045571
+      name: 'UniFi: Connected clients'
+      type: DEPENDENT
+      key: unifi.clients.count
+      history: 90d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.totalCount
+      master_item:
+        key: unifi.clients.json
+    - uuid: cc67ec962355456c9fb61d5b3a92bb6b
+      name: UniFi Clients JSON
+      type: HTTP_AGENT
+      key: unifi.clients.json
+      delay: 2m
+      history: 1d
+      value_type: TEXT
+      url: https://{$UNIFI.HOST}/proxy/network/integration/v1/sites/{$UNIFI.SITE.ID}/clients?limit=200
+      headers:
+      - name: X-API-KEY
+        value: '{$UNIFI.API.KEY}'
+      status_codes: '200'
+    - uuid: fcb2e53d03314805b1843ad8c7ac7a51
+      name: 'UniFi: VPN clients'
+      type: DEPENDENT
+      key: unifi.clients.vpn
+      history: 90d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.type=="VPN")].length()
+      master_item:
+        key: unifi.clients.json
+    - uuid: 9f939f3987a34922a980bb62fd7f4f2c
+      name: 'UniFi: Wired clients'
+      type: DEPENDENT
+      key: unifi.clients.wired
+      history: 90d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.type=="WIRED")].length()
+      master_item:
+        key: unifi.clients.json
+    - uuid: 4292f085c2554fed8db2e459662fc0a8
+      name: 'UniFi: Wireless clients'
+      type: DEPENDENT
+      key: unifi.clients.wireless
+      history: 90d
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.type=="WIRELESS")].length()
+      master_item:
+        key: unifi.clients.json
+    - uuid: 67014384039f4281819c82372f38f8a7
+      name: 'UniFi: Device count'
+      type: DEPENDENT
+      key: unifi.device.count
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.totalCount
+      master_item:
+        key: unifi.devices.json
+    - uuid: 889e0590cf8b497f8036f6c39db0dcf4
+      name: UniFi Devices JSON
+      type: HTTP_AGENT
+      key: unifi.devices.json
+      delay: 5m
+      history: 1d
+      value_type: TEXT
+      url: https://{$UNIFI.HOST}/proxy/network/integration/v1/sites/{$UNIFI.SITE.ID}/devices
+      headers:
+      - name: X-API-KEY
+        value: '{$UNIFI.API.KEY}'
+      triggers:
+      - uuid: 2fa1b20881e8442a90a1fff958e539c5
+        expression: nodata(/UniFi UDM Pro by HTTP and SNMP/unifi.devices.json,10m)=1
+        name: 'UDM Pro: UniFi API has no data'
+        priority: HIGH
+        dependencies:
+        - name: 'UDM Pro: Device is unreachable by ICMP'
+          expression: max(/UniFi UDM Pro by HTTP and SNMP/icmpping[{$UNIFI.HOST}],2m)=0
+      status_codes: '200'
+    - uuid: b22c02434a86414c966ba46617f599de
+      name: 'UniFi: Site count'
+      type: DEPENDENT
+      key: unifi.site.count
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.totalCount
+      master_item:
+        key: unifi.sites.json
+    - uuid: 985aa6ef4ef14df19e6d2365714eba12
+      name: 'UniFi: Site ID'
+      type: DEPENDENT
+      key: unifi.site.id
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[0].id
+      master_item:
+        key: unifi.sites.json
+    - uuid: 22e7d670b40143c691adce670b87bb82
+      name: 'UniFi: Site name'
+      type: DEPENDENT
+      key: unifi.site.name
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[0].name
+      master_item:
+        key: unifi.sites.json
+    - uuid: f2595cfa697a40b9b4294c208fca6b9b
+      name: UniFi Sites JSON
+      type: HTTP_AGENT
+      key: unifi.sites.json
+      value_type: TEXT
+      url: https://{$UNIFI.HOST}/proxy/network/integration/v1/sites
+      headers:
+      - name: X-API-KEY
+        value: '{$UNIFI.API.KEY}'
+      status_codes: '200'
+      history: 1d
+    - uuid: c034b782572e47d688d1021d86160527
+      name: 'UDM Pro: CPU utilization'
+      type: DEPENDENT
+      key: unifi.udm.cpu.utilization
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.cpuUtilizationPct
+      master_item:
+        key: unifi.udm.statistics.json
+      triggers:
+      - uuid: d5414b477a184b46ad379b7c3a02fe5b
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.udm.cpu.utilization,10m)>90
+        name: 'UDM Pro: High CPU utilization'
+        priority: WARNING
+    - uuid: a872ae8d3b6f43358a09af0ffcff8e7c
+      name: 'UDM Pro: Firmware version'
+      type: DEPENDENT
+      key: unifi.udm.firmware
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].firmwareVersion.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: 8c5c7fd9519040dbb00159ee18bf5232
+      name: 'UDM Pro: API IP address'
+      type: DEPENDENT
+      key: unifi.udm.ip
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].ipAddress.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: f7369afaf3f94dae8789c527851646ec
+      name: 'UDM Pro: Load average 1m'
+      type: DEPENDENT
+      key: unifi.udm.loadavg.1m
+      history: 90d
+      value_type: FLOAT
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.loadAverage1Min
+      master_item:
+        key: unifi.udm.statistics.json
+    - uuid: 5e924060c1ba4a338ca6c1d836d06c36
+      name: 'UDM Pro: Load average 5m'
+      type: DEPENDENT
+      key: unifi.udm.loadavg.5m
+      history: 90d
+      value_type: FLOAT
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.loadAverage5Min
+      master_item:
+        key: unifi.udm.statistics.json
+    - uuid: bead3acf1fa847bb87d1f7d028a80500
+      name: 'UDM Pro: Load average 15m'
+      type: DEPENDENT
+      key: unifi.udm.loadavg.15m
+      history: 90d
+      value_type: FLOAT
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.loadAverage15Min
+      master_item:
+        key: unifi.udm.statistics.json
+    - uuid: 54cc733232ec4c0f8b04b7329cd71945
+      name: 'UDM Pro: MAC address'
+      type: DEPENDENT
+      key: unifi.udm.mac
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].macAddress.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: a0b72ec9a8a44326866ab0ea124b4f9e
+      name: 'UDM Pro: Memory utilization'
+      type: DEPENDENT
+      key: unifi.udm.memory.utilization
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.memoryUtilizationPct
+      master_item:
+        key: unifi.udm.statistics.json
+      triggers:
+      - uuid: 6841a5fbac1c4dd39c6dcd730de8da01
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.udm.memory.utilization,15m)>90
+        name: 'UDM Pro: High memory utilization'
+        priority: WARNING
+    - uuid: 04a72f1c37d4415980578f52ef6d3353
+      name: 'UDM Pro: Model'
+      type: DEPENDENT
+      key: unifi.udm.model
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].model.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: 85df86198cfe484480599d98d3c3f7ed
+      name: 'UDM Pro: Name'
+      type: DEPENDENT
+      key: unifi.udm.name
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].name.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: 6547cc66d98a464f8710e1ce1b73030d
+      name: 'UDM Pro: State'
+      type: DEPENDENT
+      key: unifi.udm.state
+      value_type: CHAR
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data[?(@.model=="UDM Pro")].state.first()
+      master_item:
+        key: unifi.devices.json
+    - uuid: e2ad18e199cf439ebe39a31810e6db78
+      name: UDM Pro Statistics JSON
+      type: HTTP_AGENT
+      key: unifi.udm.statistics.json
+      history: 1d
+      value_type: TEXT
+      url: https://{$UNIFI.HOST}/proxy/network/integration/v1/sites/{$UNIFI.SITE.ID}/devices/{$UNIFI.DEVICE.ID}/statistics/latest
+      headers:
+      - name: X-API-KEY
+        value: '{$UNIFI.API.KEY}'
+      status_codes: '200'
+    - uuid: cfd949c4337f4d378141f07a2f92ff16
+      name: 'UDM Pro: Uplink received'
+      type: DEPENDENT
+      key: unifi.udm.uplink.rx
+      history: 90d
+      units: bps
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.uplink.rxRateBps
+      master_item:
+        key: unifi.udm.statistics.json
+    - uuid: e2383e66fe044641bc60f203cb0be0d2
+      name: 'UDM Pro: Uplink sent'
+      type: DEPENDENT
+      key: unifi.udm.uplink.tx
+      history: 90d
+      units: bps
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.uplink.txRateBps
+      master_item:
+        key: unifi.udm.statistics.json
+    - uuid: d3bbcc6b43354272917f18686327ba55
+      name: 'UDM Pro: Uptime'
+      type: DEPENDENT
+      key: unifi.udm.uptime
+      history: 90d
+      units: uptime
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.uptimeSec
+      master_item:
+        key: unifi.udm.statistics.json
+      triggers:
+      - uuid: 17ac3eface8d4b528e156a2edf63dfa5
+        expression: last(/UniFi UDM Pro by HTTP and SNMP/unifi.udm.uptime)<10m
+        name: 'UDM Pro: Device was restarted'
+        priority: INFO
+        tags:
+        - tag: component
+          value: system
+        - tag: scope
+          value: notice
+    - uuid: c4c13600eefd4997866dba88ec4edbb6
+      name: 'UDM Pro: {$WAN1.ISP} - download'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.31.1.1.1.6.{$WAN1.IFINDEX}
+      key: unifi.wan1.rx
+      units: bps
+      preprocessing:
+      - type: CHANGE_PER_SECOND
+      - type: MULTIPLIER
+        parameters:
+        - '8'
+      delay: 30s
+      history: 90d
+    - uuid: 4bc0bd45d8e145deb8dcac9d40487061
+      name: 'UDM Pro: {$WAN1.ISP} - download utilization'
+      type: CALCULATED
+      key: unifi.wan1.rx.util
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: last(//unifi.wan1.rx)/{$WAN1.DOWNLOAD.BPS}*100
+      triggers:
+      - uuid: e49b32cdb32d4cfcbdc317c177e1caab
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.rx.util,10m)>90
+        name: 'UDM Pro: {$WAN1.ISP} download is highly utilized'
+        priority: WARNING
+    - uuid: 29456a56809a4a7781256c2bf9a7af97
+      name: 'UDM Pro: {$WAN1.ISP} - link status'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.2.2.1.8.{$WAN1.IFINDEX}
+      key: unifi.wan1.status
+      delay: 30s
+      valuemap:
+        name: IF-MIB interface status
+      triggers:
+      - uuid: 6e66e5d92c7e4af68e35e638c451675c
+        expression: count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.status,#4,"ne","1")=4
+        name: 'UDM Pro: {$WAN1.ISP} physical link is down'
+        priority: HIGH
+        dependencies:
+        - name: 'UDM Pro: Both WAN physical links are down'
+          expression: 'count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.status,#4,"ne","1")=4
+
+            and
+
+            count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.status,#4,"ne","1")=4
+
+            '
+      history: 90d
+    - uuid: 31f8c9add0bd492ca687ff6b67bb8cfb
+      name: 'UDM Pro: {$WAN1.ISP} - upload'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.31.1.1.1.10.{$WAN1.IFINDEX}
+      key: unifi.wan1.tx
+      delay: 30s
+      history: 90d
+      units: bps
+      preprocessing:
+      - type: CHANGE_PER_SECOND
+      - type: MULTIPLIER
+        parameters:
+        - '8'
+    - uuid: ee0628e19ef44837bee47d524660b808
+      name: 'UDM Pro: {$WAN1.ISP} - upload utilization'
+      type: CALCULATED
+      key: unifi.wan1.tx.util
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: last(//unifi.wan1.tx)/{$WAN1.UPLOAD.BPS}*100
+      triggers:
+      - uuid: ec9d819a404d422bbbe802bf608438c5
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.tx.util,10m)>90
+        name: 'UDM Pro: {$WAN1.ISP} upload is highly utilized'
+        priority: WARNING
+    - uuid: ab589a1ebf9f486183207dac2dc1d2cd
+      name: 'UDM Pro: {$WAN2.ISP} - download'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.31.1.1.1.6.{$WAN2.IFINDEX}
+      key: unifi.wan2.rx
+      delay: 30s
+      history: 90d
+      units: bps
+      preprocessing:
+      - type: CHANGE_PER_SECOND
+      - type: MULTIPLIER
+        parameters:
+        - '8'
+    - uuid: 47993f63fefb4b94aa9f70d2caf20b60
+      name: 'UDM Pro: {$WAN2.ISP} - download utilization'
+      type: CALCULATED
+      key: unifi.wan2.rx.util
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: last(//unifi.wan2.rx)/{$WAN2.DOWNLOAD.BPS}*100
+      triggers:
+      - uuid: a4cc4f5cbe7a47a9a96503e698977f0c
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.rx.util,10m)>90
+        name: 'UDM Pro: {$WAN2.ISP} download is highly utilized'
+        priority: WARNING
+    - uuid: a21d8e8c19d34547af5348671eb00ad7
+      name: 'UDM Pro: {$WAN2.ISP} - link status'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.2.2.1.8.{$WAN2.IFINDEX}
+      key: unifi.wan2.status
+      delay: 30s
+      valuemap:
+        name: IF-MIB interface status
+      triggers:
+      - uuid: 69b6660d08174132b0c9baab503f8d71
+        expression: count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.status,#4,"ne","1")=4
+        name: 'UDM Pro: {$WAN2.ISP} physical link is down'
+        priority: HIGH
+        dependencies:
+        - name: 'UDM Pro: Both WAN physical links are down'
+          expression: 'count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.status,#4,"ne","1")=4
+
+            and
+
+            count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.status,#4,"ne","1")=4
+
+            '
+      history: 90d
+    - uuid: c6122a904d79461fa3b12e43222dfabf
+      name: 'UDM Pro: {$WAN2.ISP} - upload'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.31.1.1.1.10.{$WAN2.IFINDEX}
+      key: unifi.wan2.tx
+      delay: 30s
+      history: 90d
+      units: bps
+      preprocessing:
+      - type: CHANGE_PER_SECOND
+      - type: MULTIPLIER
+        parameters:
+        - '8'
+    - uuid: 5ea3947e0919419a81a859a4fbff92c5
+      name: 'UDM Pro: {$WAN2.ISP} - upload utilization'
+      type: CALCULATED
+      key: unifi.wan2.tx.util
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: last(//unifi.wan2.tx)/{$WAN2.UPLOAD.BPS}*100
+      triggers:
+      - uuid: a5da8a3f73fe42139ba71f4a55507f34
+        expression: avg(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.tx.util,10m)>90
+        name: 'UDM Pro: {$WAN2.ISP} upload is highly utilized'
+        priority: WARNING
+    discovery_rules:
+    - uuid: caee93191ff44a8d9b6cf785c51262f1
+      name: 'UniFi: Device discovery'
+      type: DEPENDENT
+      key: unifi.device.discovery
+      item_prototypes:
+      - uuid: cf0292273d7248fb8e995b69c241f7bf
+        name: 'UniFi device [{#UNIFI.NAME}]: Firmware update available'
+        type: DEPENDENT
+        key: unifi.device.firmware.updatable[{#UNIFI.ID}]
+        trends: '0'
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.data[?(@.id=="{#UNIFI.ID}")].firmwareUpdatable.first()
+        - type: JAVASCRIPT
+          parameters:
+          - 'return value === "true" ? 1 : 0;'
+        master_item:
+          key: unifi.devices.json
+        trigger_prototypes:
+        - uuid: 5b74d4b766414274a39ca3c88930fbc4
+          expression: last(/UniFi UDM Pro by HTTP and SNMP/unifi.device.firmware.updatable[{#UNIFI.ID}])=1
+          name: UniFi device [{#UNIFI.NAME}] has firmware update available
+          priority: INFO
+      - uuid: 3192c39223634d978c6830f5542b45f1
+        name: 'UniFi device [{#UNIFI.NAME}]: Firmware version'
+        type: DEPENDENT
+        key: unifi.device.firmware[{#UNIFI.ID}]
+        value_type: CHAR
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.data[?(@.id=="{#UNIFI.ID}")].firmwareVersion.first()
+        master_item:
+          key: unifi.devices.json
+      - uuid: 3c1b6672988b4156a1bb701f5adc7525
+        name: 'UniFi device [{#UNIFI.NAME}]: IP address'
+        type: DEPENDENT
+        key: unifi.device.ip[{#UNIFI.ID}]
+        value_type: CHAR
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.data[?(@.id=="{#UNIFI.ID}")].ipAddress.first()
+        master_item:
+          key: unifi.devices.json
+      - uuid: fd371d23e9c740a9b306854f8e02348d
+        name: 'UniFi device [{#UNIFI.NAME}]: State'
+        type: DEPENDENT
+        key: unifi.device.state[{#UNIFI.ID}]
+        value_type: CHAR
+        preprocessing:
+        - type: JSONPATH
+          parameters:
+          - $.data[?(@.id=="{#UNIFI.ID}")].state.first()
+        master_item:
+          key: unifi.devices.json
+        trigger_prototypes:
+        - uuid: 4a0239c1d6ff4ee09ebfb21f18f9b5c0
+          expression: count(/UniFi UDM Pro by HTTP and SNMP/unifi.device.state[{#UNIFI.ID}],#3,"ne","ONLINE")=3
+          name: UniFi device [{#UNIFI.NAME}] is not online
+          priority: HIGH
+      master_item:
+        key: unifi.devices.json
+      lld_macro_paths:
+      - lld_macro: '{#UNIFI.FIRMWARE}'
+        path: $.firmwareVersion
+      - lld_macro: '{#UNIFI.ID}'
+        path: $.id
+      - lld_macro: '{#UNIFI.IP}'
+        path: $.ipAddress
+      - lld_macro: '{#UNIFI.MAC}'
+        path: $.macAddress
+      - lld_macro: '{#UNIFI.MODEL}'
+        path: $.model
+      - lld_macro: '{#UNIFI.NAME}'
+        path: $.name
+      - lld_macro: '{#UNIFI.STATE}'
+        path: $.state
+      - lld_macro: '{#UNIFI.UPDATABLE}'
+        path: $.firmwareUpdatable
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.data
+    dashboards:
+    - uuid: bf53f3a48e984ac7b6aff2a911a00fe5
+      name: UDM Pro - Network overview
+      pages:
+      - widgets:
+        - type: item
+          name: UDM Pro availability
+          x: '5'
+          y: '1'
+          width: '12'
+          height: '3'
+          fields:
+          - type: INTEGER
+            name: aggregate_function
+            value: '7'
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '25'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: icmpping[{$UNIFI.HOST}]
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: STRING
+            name: thresholds.0.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '1'
+          - type: INTEGER
+            name: units_bold
+            value: '0'
+          - type: INTEGER
+            name: units_show
+            value: '0'
+        - type: graph
+          name: WAN1 traffic
+          x: '5'
+          y: '4'
+          width: '25'
+          height: '5'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              name: 'UDM Pro: WAN1 traffic'
+          - type: STRING
+            name: reference
+            value: LMDQG
+        - type: graph
+          name: WAN utilization
+          x: '5'
+          y: '9'
+          width: '50'
+          height: '5'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              name: 'UDM Pro: WAN utilization'
+          - type: STRING
+            name: reference
+            value: BCAZE
+        - type: gauge
+          name: UDM Pro CPU
+          x: '5'
+          y: '14'
+          width: '13'
+          height: '3'
+          fields:
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: unifi.udm.cpu.utilization
+          - type: STRING
+            name: max
+            value: '100'
+          - type: STRING
+            name: min
+            value: '0'
+          - type: STRING
+            name: thresholds.0.color
+            value: 00FF00
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: FFBF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '75'
+          - type: STRING
+            name: thresholds.2.color
+            value: FF4000
+          - type: STRING
+            name: thresholds.2.threshold
+            value: '90'
+        - type: gauge
+          name: UDM Pro RAM
+          x: '5'
+          y: '17'
+          width: '13'
+          height: '3'
+          fields:
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: unifi.udm.memory.utilization
+          - type: STRING
+            name: max
+            value: '100'
+          - type: STRING
+            name: min
+            value: '0'
+          - type: STRING
+            name: thresholds.0.color
+            value: 00FF00
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: FFBF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '75'
+          - type: STRING
+            name: thresholds.2.color
+            value: FF4000
+          - type: STRING
+            name: thresholds.2.threshold
+            value: '90'
+        - type: problems
+          name: Active UDM and UniFi problems
+          x: '5'
+          y: '20'
+          width: '50'
+          height: '5'
+          fields:
+          - type: INTEGER
+            name: highlight_row
+            value: '1'
+          - type: STRING
+            name: reference
+            value: RORAJ
+          - type: INTEGER
+            name: severities.0
+            value: '2'
+          - type: INTEGER
+            name: severities.1
+            value: '3'
+          - type: INTEGER
+            name: severities.2
+            value: '4'
+          - type: INTEGER
+            name: severities.3
+            value: '5'
+          - type: INTEGER
+            name: show
+            value: '3'
+          - type: INTEGER
+            name: show_lines
+            value: '10'
+          - type: INTEGER
+            name: show_opdata
+            value: '2'
+          - type: INTEGER
+            name: show_tags
+            value: '3'
+          - type: INTEGER
+            name: tag_name_format
+            value: '1'
+        - type: graph
+          name: Connected clients over time
+          x: '5'
+          y: '25'
+          width: '50'
+          height: '5'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              name: 'UniFi: Connected clients'
+          - type: STRING
+            name: reference
+            value: AESGL
+        - type: item
+          name: WAN1
+          x: '18'
+          y: '1'
+          width: '12'
+          height: '3'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '25'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: unifi.wan1.status
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: STRING
+            name: thresholds.0.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '1'
+          - type: INTEGER
+            name: units_bold
+            value: '0'
+          - type: INTEGER
+            name: units_show
+            value: '0'
+        - type: graph
+          name: UDM Pro Load average
+          x: '18'
+          y: '14'
+          width: '37'
+          height: '6'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              name: 'UDM Pro: Load average'
+          - type: STRING
+            name: reference
+            value: EVCVA
+        - type: item
+          name: WAN2
+          x: '30'
+          y: '1'
+          width: '12'
+          height: '3'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '25'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: unifi.wan2.status
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: STRING
+            name: thresholds.0.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '1'
+          - type: INTEGER
+            name: units_bold
+            value: '0'
+          - type: INTEGER
+            name: units_show
+            value: '0'
+        - type: graph
+          name: WAN2 traffic
+          x: '30'
+          y: '4'
+          width: '25'
+          height: '5'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              name: 'UDM Pro: WAN2 traffic'
+          - type: STRING
+            name: reference
+            value: IBVMZ
+        - type: item
+          name: Connected clients
+          x: '43'
+          y: '1'
+          width: '12'
+          height: '3'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '25'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: UniFi UDM Pro by HTTP and SNMP
+              key: unifi.clients.count
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: show.1
+            value: '5'
+          - type: INTEGER
+            name: units_bold
+            value: '0'
+          - type: INTEGER
+            name: units_show
+            value: '0'
+    valuemaps:
+    - uuid: 04074daa05b74912a00158c92c118e59
+      name: ICMP availability
+      mappings:
+      - value: '0'
+        newvalue: Down
+      - value: '1'
+        newvalue: Up
+    - uuid: 36f2e76da8e045029299fb217b9872c7
+      name: IF-MIB interface status
+      mappings:
+      - value: '1'
+        newvalue: Up
+      - value: '2'
+        newvalue: Down
+      - value: '3'
+        newvalue: Testing
+      - value: '4'
+        newvalue: Unknown
+      - value: '5'
+        newvalue: Dormant
+      - value: '6'
+        newvalue: Not present
+      - value: '7'
+        newvalue: Lower layer down
+    description: Monitors UniFi UDM Pro and adopted UniFi devices using the official local UniFi Network API, ICMP and SNMP. Configure all required
+      host macros before enabling the host. Tested with Zabbix 8.0 and UniFi Network 10.6.x.
+    tags:
+    - tag: class
+      value: network
+    - tag: target
+      value: unifi-udm-pro
+  triggers:
+  - uuid: 6a6e77cf00244dc59d82977a515eb32b
+    expression: 'count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan1.status,#4,"ne","1")=4
+
+      and
+
+      count(/UniFi UDM Pro by HTTP and SNMP/unifi.wan2.status,#4,"ne","1")=4
+
+      '
+    name: 'UDM Pro: Both WAN physical links are down'
+    priority: DISASTER
+    dependencies:
+    - name: 'UDM Pro: Device is unreachable by ICMP'
+      expression: max(/UniFi UDM Pro by HTTP and SNMP/icmpping[{$UNIFI.HOST}],2m)=0
+  graphs:
+  - uuid: 3a4497189b974b8cbc86cb2bbed708bf
+    name: 'UDM Pro: WAN1 traffic'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 1A7C11
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan1.rx
+    - sortorder: '1'
+      color: '274482'
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan1.tx
+  - uuid: 32abb6c111644cd5953d622082a326a4
+    name: 'UDM Pro: Load average'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: FF9800
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.udm.loadavg.5m
+    - sortorder: '1'
+      color: '274482'
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.udm.loadavg.15m
+    - sortorder: '2'
+      color: FF0000
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.udm.loadavg.1m
+  - uuid: 56f58cff37204438b5cac735d41b7a0a
+    name: 'UDM Pro: WAN2 traffic'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 1A7C11
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan2.rx
+    - sortorder: '1'
+      color: '274482'
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan2.tx
+  - uuid: 891a3cfeffc3423aa45a505c7277ae53
+    name: 'UDM Pro: WAN utilization'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: 1A7C11
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan1.rx.util
+    - sortorder: '1'
+      color: BFFF00
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan1.tx.util
+    - sortorder: '2'
+      color: 4000FF
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan2.rx.util
+    - sortorder: '3'
+      color: 00FFFF
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.wan2.tx.util
+  - uuid: 96d23d2e8c194b1e9bb9cedfd256ef57
+    name: 'UniFi: Connected clients'
+    graph_items:
+    - color: 4000FF
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.clients.count
+    - sortorder: '1'
+      color: BF00FF
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.clients.vpn
+    - sortorder: '2'
+      color: FFBF00
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.clients.wired
+    - sortorder: '3'
+      color: 00FF00
+      calc_fnc: ALL
+      item:
+        host: UniFi UDM Pro by HTTP and SNMP
+        key: unifi.clients.wireless

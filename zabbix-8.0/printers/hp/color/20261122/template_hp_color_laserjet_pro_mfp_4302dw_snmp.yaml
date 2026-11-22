@@ -1,0 +1,639 @@
+zabbix_export:
+  version: '8.0'
+  template_groups:
+  - uuid: 482475f473b64b2f85ca54d72a08033a
+    name: Templates/Network devices
+  templates:
+  - uuid: a91a638027804643880acb5e929fa834
+    template: HP Color LaserJet Pro MFP 4302dw by SNMP
+    name: HP Color LaserJet Pro MFP 4302dw by SNMP
+    description: Zabbix 8.0 SNMP template for HP Color LaserJet Pro MFP 4302dw, based on the validated HP monochrome v5 template. Printer-MIB LLD discovers Black, Cyan, Magenta and Yellow cartridges and optional additional consumables without hard-coded supply indexes.
+    groups:
+    - name: Templates/Network devices
+    items:
+    - uuid: 10e94e7c9f47481f8b29818c72354dc2
+      name: ICMP availability
+      type: SIMPLE
+      key: icmpping
+      delay: 30s
+      history: 90d
+      valuemap:
+        name: ICMP availability
+      triggers:
+      - uuid: e9c8b6ea4d2e4c74804c5de5e9459aba
+        expression: max(/HP Color LaserJet Pro MFP 4302dw by SNMP/icmpping,3m)=0
+        name: Printer is unreachable by ICMP
+        priority: HIGH
+        tags:
+        - tag: component
+          value: availability
+    - uuid: 519fbe3f5de943468b4cc655aac37f39
+      name: Ping response time
+      type: SIMPLE
+      key: icmppingsec[,3]
+      delay: 30s
+      history: 90d
+      value_type: FLOAT
+      units: s
+    - uuid: d7940713c5344b1b86a9419a0794537c
+      name: System name
+      type: SNMP_AGENT
+      key: printer.system.name
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.5.0
+      value_type: CHAR
+    - uuid: ee4e7945fc234a0f8e393ae634631e82
+      name: System description
+      type: SNMP_AGENT
+      key: printer.system.description
+      delay: 1h
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.1.0
+      value_type: TEXT
+    - uuid: 556a47e5febe4f4287e837ad82861421
+      name: SNMP uptime
+      type: SNMP_AGENT
+      key: printer.system.uptime
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.1.3.0
+      units: uptime
+      preprocessing:
+      - type: MULTIPLIER
+        parameters:
+        - '0.01'
+    - uuid: 3c4223afbde348ac8861eb03155070eb
+      name: Printed pages total
+      type: SNMP_AGENT
+      key: printer.pages.total
+      delay: 5m
+      history: 90d
+      snmp_oid: 1.3.6.1.2.1.43.10.2.1.4.1.1
+      units: pages
+    - uuid: 27326d79405d418980d02fe4b6296935
+      name: Printed pages formatted
+      type: DEPENDENT
+      key: printer.pages.total.formatted
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      master_item:
+        key: printer.pages.total
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      description: Dashboard display value with a space as the thousands separator. The numeric printer.pages.total item remains authoritative for graphs and calculations.
+    - uuid: c798d3613de940c18a3f795a11f51be7
+      name: 'Toner Black: Maximum capacity'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.8.1.1
+      key: printer.toner.black.max
+      delay: 1h
+      history: 90d
+    - uuid: 41bf1bf4d0a842648111d9d67593dfb5
+      name: 'Toner Black: Current level'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.9.1.1
+      key: printer.toner.black.level
+      delay: 5m
+      history: 90d
+    - uuid: 0472f0524e464f618a2d5194fadaf773
+      name: 'Toner Black: Remaining'
+      type: CALCULATED
+      key: printer.toner.black.percent
+      delay: 5m
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: 100 * last(//printer.toner.black.level) / last(//printer.toner.black.max)
+      triggers:
+      - uuid: 21e298912c5547c88dea9c8703707ec8
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)<{$PRINTER.TONER.WARN} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)>=0
+        name: 'Printer: Black toner is low (<{$PRINTER.TONER.WARN}%)'
+        priority: WARNING
+        dependencies:
+        - name: 'Printer: Black toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+          expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)>=0
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: black
+      - uuid: 5d98e25e78e9432e82b109b4f680bf13
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.black.percent)>=0
+        name: 'Printer: Black toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+        priority: HIGH
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: black
+    - uuid: ff2d53bbfdd544308f73c1be69569c91
+      name: 'Toner Cyan: Maximum capacity'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.8.1.2
+      key: printer.toner.cyan.max
+      delay: 1h
+      history: 90d
+    - uuid: 9f3d9fda18714a6b8868f80f16c44e96
+      name: 'Toner Cyan: Current level'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.9.1.2
+      key: printer.toner.cyan.level
+      delay: 5m
+      history: 90d
+    - uuid: 351d8b20f683457281957c1493d0d293
+      name: 'Toner Cyan: Remaining'
+      type: CALCULATED
+      key: printer.toner.cyan.percent
+      delay: 5m
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: 100 * last(//printer.toner.cyan.level) / last(//printer.toner.cyan.max)
+      triggers:
+      - uuid: 86699f8ff24d422980c0d920b760210e
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)<{$PRINTER.TONER.WARN} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)>=0
+        name: 'Printer: Cyan toner is low (<{$PRINTER.TONER.WARN}%)'
+        priority: WARNING
+        dependencies:
+        - name: 'Printer: Cyan toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+          expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)>=0
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: cyan
+      - uuid: c5a3e5aa181747658728efa6b7898505
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.cyan.percent)>=0
+        name: 'Printer: Cyan toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+        priority: HIGH
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: cyan
+    - uuid: 966a11c5bcd44e8386321d2a013c8117
+      name: 'Toner Magenta: Maximum capacity'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.8.1.3
+      key: printer.toner.magenta.max
+      delay: 1h
+      history: 90d
+    - uuid: f99c42ae2f4b484d8455855350d878a5
+      name: 'Toner Magenta: Current level'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.9.1.3
+      key: printer.toner.magenta.level
+      delay: 5m
+      history: 90d
+    - uuid: 2eea2489ddf9475289c0af2080f94e3d
+      name: 'Toner Magenta: Remaining'
+      type: CALCULATED
+      key: printer.toner.magenta.percent
+      delay: 5m
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: 100 * last(//printer.toner.magenta.level) / last(//printer.toner.magenta.max)
+      triggers:
+      - uuid: 5903209ddc8b44e98ca2f21af76eccdd
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)<{$PRINTER.TONER.WARN} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)>=0
+        name: 'Printer: Magenta toner is low (<{$PRINTER.TONER.WARN}%)'
+        priority: WARNING
+        dependencies:
+        - name: 'Printer: Magenta toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+          expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)>=0
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: magenta
+      - uuid: 6f10b34433734e458b559fa7bedbe5f1
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.magenta.percent)>=0
+        name: 'Printer: Magenta toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+        priority: HIGH
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: magenta
+    - uuid: 7ec9165c1d28483586fec2620f8ed4c8
+      name: 'Toner Yellow: Maximum capacity'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.8.1.4
+      key: printer.toner.yellow.max
+      delay: 1h
+      history: 90d
+    - uuid: f340d1d19fad4dd68d7ba221394be3e7
+      name: 'Toner Yellow: Current level'
+      type: SNMP_AGENT
+      snmp_oid: 1.3.6.1.2.1.43.11.1.1.9.1.4
+      key: printer.toner.yellow.level
+      delay: 5m
+      history: 90d
+    - uuid: a9709dc52d4f43368a5bc1ab2e0a93d9
+      name: 'Toner Yellow: Remaining'
+      type: CALCULATED
+      key: printer.toner.yellow.percent
+      delay: 5m
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      params: 100 * last(//printer.toner.yellow.level) / last(//printer.toner.yellow.max)
+      triggers:
+      - uuid: 7a8e74f5d30e4ab286cb7836373e5aff
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)<{$PRINTER.TONER.WARN} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)>=0
+        name: 'Printer: Yellow toner is low (<{$PRINTER.TONER.WARN}%)'
+        priority: WARNING
+        dependencies:
+        - name: 'Printer: Yellow toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+          expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)>=0
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: yellow
+      - uuid: 0cd0898284d044828dba54a4921b9d1e
+        expression: last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)<{$PRINTER.TONER.CRIT} and last(/HP Color LaserJet Pro MFP 4302dw by SNMP/printer.toner.yellow.percent)>=0
+        name: 'Printer: Yellow toner is critically low (<{$PRINTER.TONER.CRIT}%)'
+        priority: HIGH
+        tags:
+        - tag: component
+          value: toner
+        - tag: color
+          value: yellow
+    macros:
+    - macro: '{$PRINTER.TONER.WARN}'
+      value: '20'
+      description: Toner warning threshold in percent.
+    - macro: '{$PRINTER.TONER.CRIT}'
+      value: '10'
+      description: Toner high-severity threshold in percent.
+    tags:
+    - tag: class
+      value: printer
+    - tag: technology
+      value: color-laser
+    - tag: vendor
+      value: HP
+    valuemaps:
+    - uuid: 8642ef05a911410f8fc7cbd1dac8b515
+      name: ICMP availability
+      mappings:
+      - value: '0'
+        newvalue: Down
+      - value: '1'
+        newvalue: Up
+    dashboards:
+    - uuid: feba69bc29bb4fac8dee665ac00b190d
+      name: HP Color LaserJet Pro MFP 4302dw overview
+      pages:
+      - name: Overview
+        widgets:
+        - type: item
+          name: ICMP availability
+          width: '12'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              key: icmpping
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: R231B
+          - type: STRING
+            name: thresholds.0.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '1'
+        - type: item
+          name: Ping response time
+          width: '12'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '3'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              key: icmppingsec[,3]
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RAC90
+          - type: STRING
+            name: thresholds.0.color
+            value: 80FF00
+          - type: STRING
+            name: thresholds.0.threshold
+            value: '0'
+          - type: STRING
+            name: thresholds.1.color
+            value: FFBF00
+          - type: STRING
+            name: thresholds.1.threshold
+            value: '0.05'
+          - type: STRING
+            name: thresholds.2.color
+            value: FF0000
+          - type: STRING
+            name: thresholds.2.threshold
+            value: '0.2'
+          x: '12'
+        - type: item
+          name: System name
+          width: '18'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '20'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              key: printer.system.name
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '20'
+          - type: INTEGER
+            name: value_size
+            value: '20'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RFF2D
+          x: '24'
+        - type: item
+          name: Uptime
+          width: '14'
+          height: '4'
+          fields:
+          - type: INTEGER
+            name: decimal_places
+            value: '0'
+          - type: INTEGER
+            name: decimal_size
+            value: '14'
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              key: printer.system.uptime
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: units_size
+            value: '14'
+          - type: INTEGER
+            name: value_size
+            value: '14'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RED60
+          x: '42'
+        - type: item
+          name: Printed pages
+          width: '16'
+          height: '4'
+          fields:
+          - type: ITEM
+            name: itemid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              key: printer.pages.total.formatted
+          - type: INTEGER
+            name: show.0
+            value: '2'
+          - type: INTEGER
+            name: value_size
+            value: '18'
+          - type: INTEGER
+            name: desc_size
+            value: '11'
+          - type: STRING
+            name: reference
+            value: RD3EF
+          x: '56'
+        - type: graph
+          name: Ping response time
+          y: '12'
+          width: '36'
+          height: '6'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Printer: Ping response time'
+          - type: STRING
+            name: reference
+            value: PINGG
+        - type: graph
+          name: Printed pages total
+          x: '36'
+          y: '12'
+          width: '36'
+          height: '6'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Printer: Printed pages total'
+          - type: STRING
+            name: reference
+            value: PAGEG
+        - type: problems
+          name: Printer problems
+          y: '18'
+          width: '72'
+          height: '6'
+          fields:
+          - type: INTEGER
+            name: show
+            value: '3'
+          - type: INTEGER
+            name: show_tags
+            value: '2'
+        - type: graph
+          name: Toner Black
+          width: '36'
+          height: '4'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Toner Black: Remaining %'
+          - type: STRING
+            name: reference
+            value: T0001
+          y: '4'
+        - type: graph
+          name: Toner Cyan
+          width: '36'
+          height: '4'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Toner Cyan: Remaining %'
+          - type: STRING
+            name: reference
+            value: T0002
+          x: '36'
+          y: '4'
+        - type: graph
+          name: Toner Magenta
+          width: '36'
+          height: '4'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Toner Magenta: Remaining %'
+          - type: STRING
+            name: reference
+            value: T0003
+          y: '8'
+        - type: graph
+          name: Toner Yellow
+          width: '36'
+          height: '4'
+          fields:
+          - type: GRAPH
+            name: graphid.0
+            value:
+              host: HP Color LaserJet Pro MFP 4302dw by SNMP
+              name: 'Toner Yellow: Remaining %'
+          - type: STRING
+            name: reference
+            value: T0004
+          x: '36'
+          y: '8'
+  graphs:
+  - uuid: 206c48e0665846e080a625bb6987dea2
+    name: 'Printer: Printed pages total'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 0040FF
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: printer.pages.total
+  - uuid: 8298baffbd324e1e857f03a877079d00
+    name: 'Printer: Ping response time'
+    show_work_period: 'NO'
+    show_triggers: 'NO'
+    ymin_type_1: FIXED
+    graph_items:
+    - color: 1E88E5
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: icmppingsec[,3]
+  - uuid: 6a738a17687344368ab46f8e65432b2d
+    name: 'Toner Black: Remaining %'
+    show_work_period: 'NO'
+    show_triggers: 'YES'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: '000000'
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: printer.toner.black.percent
+  - uuid: 34cd42ffd8e040ff88744246270c7c91
+    name: 'Toner Cyan: Remaining %'
+    show_work_period: 'NO'
+    show_triggers: 'YES'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: 00AEEF
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: printer.toner.cyan.percent
+  - uuid: f0164a0c3f264b6e80818e58b7dc4074
+    name: 'Toner Magenta: Remaining %'
+    show_work_period: 'NO'
+    show_triggers: 'YES'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: D81B60
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: printer.toner.magenta.percent
+  - uuid: 3a040427d0a444f4810ece7b35ddb041
+    name: 'Toner Yellow: Remaining %'
+    show_work_period: 'NO'
+    show_triggers: 'YES'
+    ymin_type_1: FIXED
+    ymax_type_1: FIXED
+    graph_items:
+    - color: FFD600
+      item:
+        host: HP Color LaserJet Pro MFP 4302dw by SNMP
+        key: printer.toner.yellow.percent
